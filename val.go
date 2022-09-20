@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type Dimension struct {
+type Val struct {
 	val  big.Rat
 	unit Unit
 }
@@ -23,19 +23,19 @@ var (
 	bigTwelve = big.NewRat(12, 1)
 )
 
-func (x Dimension) Add(y Dimension) (Dimension, error) {
+func (x Val) Add(y Val) (Val, error) {
 	if x.unit != y.unit {
-		return Dimension{}, fmt.Errorf("cannot add dimensions with different units: %s and %s", x, y)
+		return Val{}, fmt.Errorf("cannot add dimensions with different units: %s and %s", x, y)
 	}
-	var z Dimension
+	var z Val
 	z.val.Add(&x.val, &y.val)
 	z.unit = x.unit
 	return z, nil
 }
 
-func (x Dimension) Mul(y Dimension) (Dimension, error) {
+func (x Val) Mul(y Val) (Val, error) {
 	// At least one must be dimensionless
-	var z Dimension
+	var z Val
 	if x.unit == UnitNone && y.unit == UnitNone {
 		z.unit = UnitNone
 	} else if x.unit == UnitNone && y.unit != UnitNone {
@@ -44,19 +44,19 @@ func (x Dimension) Mul(y Dimension) (Dimension, error) {
 		z.unit = x.unit
 	} else {
 		// TODO: Implement this
-		return Dimension{}, fmt.Errorf("cannot multiply units: %s and %s", x, y)
+		return Val{}, fmt.Errorf("cannot multiply units: %s and %s", x, y)
 	}
 	z.val.Mul(&x.val, &y.val)
 	return z, nil
 }
 
-func (x Dimension) Div(y Dimension) (Dimension, error) {
-	var z Dimension
+func (x Val) Div(y Val) (Val, error) {
+	var z Val
 	if x.unit == y.unit {
 		z.unit = UnitNone
 	} else if x.unit == UnitNone && y.unit != UnitNone {
 		// TODO: Implement this
-		return Dimension{}, fmt.Errorf("not implemented: %s / %s", x, y)
+		return Val{}, fmt.Errorf("not implemented: %s / %s", x, y)
 	} else if x.unit != UnitNone && y.unit == UnitNone {
 		z.unit = x.unit
 	} else {
@@ -66,7 +66,7 @@ func (x Dimension) Div(y Dimension) (Dimension, error) {
 	return z, nil
 }
 
-func (x Dimension) String() string {
+func (x Val) String() string {
 	var b strings.Builder
 
 	switch x.unit {

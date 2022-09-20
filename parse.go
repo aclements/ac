@@ -7,19 +7,19 @@ import (
 	"strings"
 )
 
-func Parse(s string) (Dimension, error) {
+func Parse(s string) (Val, error) {
 	toks, err := tokenize(s)
 	if err != nil {
-		return Dimension{}, err
+		return Val{}, err
 	}
 
 	p := parser{}
 	x := p.expr(toks)
 	if p.err != nil {
-		return Dimension{}, p.err
+		return Val{}, p.err
 	}
 	if p.err2 != nil {
-		return Dimension{}, p.err2
+		return Val{}, p.err2
 	}
 	return x, nil
 }
@@ -124,7 +124,7 @@ func (p *parser) mathError(tok tok, err error) {
 	}
 }
 
-func (p *parser) expr(toks []tok) Dimension {
+func (p *parser) expr(toks []tok) Val {
 	toks, x := p.mulExpr(toks)
 	if toks[0].kind != 0 {
 		p.error(toks[0], "expected end")
@@ -132,12 +132,12 @@ func (p *parser) expr(toks []tok) Dimension {
 	return x
 }
 
-func (p *parser) mulExpr(toks []tok) ([]tok, Dimension) {
+func (p *parser) mulExpr(toks []tok) ([]tok, Val) {
 	toks, x := p.addExpr(toks)
 
 	for toks[0].kind == '*' || toks[0].kind == '/' {
 		op := toks[0]
-		var y Dimension
+		var y Val
 		toks, y = p.mulExpr(toks[1:])
 		var err error
 		if op.kind == '*' {
@@ -153,15 +153,15 @@ func (p *parser) mulExpr(toks []tok) ([]tok, Dimension) {
 	return toks, x
 }
 
-func (p *parser) addExpr(toks []tok) ([]tok, Dimension) {
+func (p *parser) addExpr(toks []tok) ([]tok, Val) {
 	toks, x := p.numExp(toks)
 
 	for toks[0].kind == '+' || toks[0].kind == '-' {
 		op := toks[0]
-		var y Dimension
+		var y Val
 		toks, y = p.mulExpr(toks[1:])
 		if toks == nil {
-			return nil, Dimension{}
+			return nil, Val{}
 		}
 		if op.kind == '-' {
 			y.val.Neg(&y.val)
@@ -176,11 +176,11 @@ func (p *parser) addExpr(toks []tok) ([]tok, Dimension) {
 	return toks, x
 }
 
-func (p *parser) numExp(toks []tok) ([]tok, Dimension) {
+func (p *parser) numExp(toks []tok) ([]tok, Val) {
 	switch toks[0].kind {
 	case 0:
 		p.error(toks[0], "unexpected end")
-		return toks, Dimension{}
+		return toks, Val{}
 
 	case '(':
 		toks, x := p.mulExpr(toks[1:])
@@ -188,7 +188,7 @@ func (p *parser) numExp(toks []tok) ([]tok, Dimension) {
 			return toks[1:], x
 		}
 		p.error(toks[0], "expected `)`")
-		return toks, Dimension{}
+		return toks, Val{}
 
 	case 'n':
 		return p.number(toks)
@@ -200,16 +200,16 @@ func (p *parser) numExp(toks []tok) ([]tok, Dimension) {
 	}
 
 	p.error(toks[0], "unexpected "+toks[0].KindString())
-	return toks, Dimension{}
+	return toks, Val{}
 }
 
-func (p *parser) number(toks []tok) ([]tok, Dimension) {
+func (p *parser) number(toks []tok) ([]tok, Val) {
 	// number :=
 	//  <n>
 	//  <n> ' [<n> "]
 	//  <n> "
 
-	var x Dimension
+	var x Val
 	switch toks[1].kind {
 	case '\'':
 		// Feet

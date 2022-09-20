@@ -33,7 +33,7 @@ func (x Dimension) Add(y Dimension) (Dimension, error) {
 	return z, nil
 }
 
-func (x Dimension) mulUnit(y Dimension) (Dimension, error) {
+func (x Dimension) Mul(y Dimension) (Dimension, error) {
 	// At least one must be dimensionless
 	var z Dimension
 	if x.unit == UnitNone && y.unit == UnitNone {
@@ -46,22 +46,21 @@ func (x Dimension) mulUnit(y Dimension) (Dimension, error) {
 		// TODO: Implement this
 		return Dimension{}, fmt.Errorf("cannot multiply units: %s and %s", x, y)
 	}
-	return z, nil
-}
-
-func (x Dimension) Mul(y Dimension) (Dimension, error) {
-	z, err := x.mulUnit(y)
-	if err != nil {
-		return Dimension{}, err
-	}
 	z.val.Mul(&x.val, &y.val)
 	return z, nil
 }
 
 func (x Dimension) Div(y Dimension) (Dimension, error) {
-	z, err := x.mulUnit(y)
-	if err != nil {
-		return Dimension{}, err
+	var z Dimension
+	if x.unit == y.unit {
+		z.unit = UnitNone
+	} else if x.unit == UnitNone && y.unit != UnitNone {
+		// TODO: Implement this
+		return Dimension{}, fmt.Errorf("not implemented: %s / %s", x, y)
+	} else if x.unit != UnitNone && y.unit == UnitNone {
+		z.unit = x.unit
+	} else {
+		panic("unexpected case")
 	}
 	z.val.Quo(&x.val, &y.val)
 	return z, nil

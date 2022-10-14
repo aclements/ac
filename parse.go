@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// TODO: "13' 9" * (1/2" / 1') - 13' 9" * (1/4" / 1')" doesn't parse correctly.
+// TODO: "5 - 1 - 1" is wrong (associativity?)
+
 func Parse(s string) (Val, error) {
 	toks, err := tokenize(s)
 	if err != nil {
@@ -210,21 +213,21 @@ func (p *parser) number(toks []tok) ([]tok, Val) {
 	//  <n> "
 
 	var x Val
+	var tmp big.Rat
 	switch toks[1].kind {
 	case '\'':
 		// Feet
-		var tmp big.Rat
-		x.val.Add(&x.val, tmp.Mul(&toks[0].val, bigTwelve))
-		x.unit = UnitInch
+		x.val.Add(&x.val, tmp.Mul(&toks[0].val, LengthFeet))
 		toks = toks[2:]
 		if !(toks[0].kind == 'n' && toks[1].kind == '"') {
+			x.unit = NewUnitLength(true)
 			return toks, x
 		}
 		fallthrough
 	case '"':
 		// Inches (possibly preceded by feet)
-		x.val.Add(&x.val, &toks[0].val)
-		x.unit = UnitInch
+		x.val.Add(&x.val, tmp.Mul(&toks[0].val, LengthInches))
+		x.unit = NewUnitLength(true)
 		toks = toks[2:]
 		return toks, x
 	}

@@ -73,6 +73,6 @@ func do(s string) error {
 		}
 		return err
 	}
-	fmt.Println(result)
+	fmt.Println(result.VerboseString())
 	return nil
 }

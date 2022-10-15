@@ -7,9 +7,6 @@ import (
 	"strings"
 )
 
-// TODO: "13' 9" * (1/2" / 1') - 13' 9" * (1/4" / 1')" doesn't parse correctly.
-// TODO: "5 - 1 - 1" is wrong (associativity?)
-
 func Parse(s string) (Val, error) {
 	toks, err := tokenize(s)
 	if err != nil {
@@ -72,6 +69,7 @@ func tokenize(s string) ([]tok, error) {
 			var val big.Rat
 			num := numRe.FindString(s)
 			if _, ok := val.SetString(num); !ok {
+				// Should never happen since we passed numRe.
 				return nil, &SyntaxError{pos: pos, msg: "malformed number"}
 			}
 			s = s[len(num):]
@@ -111,7 +109,7 @@ func isSpace(c byte) bool {
 
 type parser struct {
 	err  *SyntaxError
-	err2 error
+	err2 *SyntaxError
 }
 
 func (p *parser) error(tok tok, f string, args ...interface{}) {
@@ -123,41 +121,20 @@ func (p *parser) error(tok tok, f string, args ...interface{}) {
 
 func (p *parser) mathError(tok tok, err error) {
 	if p.err2 == nil {
-		p.err2 = err
+		p.err2 = &SyntaxError{pos: tok.pos, msg: err.Error()}
 	}
 }
 
 func (p *parser) expr(toks []tok) Val {
-	toks, x := p.mulExpr(toks)
+	toks, x := p.addExpr(toks)
 	if toks[0].kind != 0 {
 		p.error(toks[0], "expected end")
 	}
 	return x
 }
 
-func (p *parser) mulExpr(toks []tok) ([]tok, Val) {
-	toks, x := p.addExpr(toks)
-
-	for toks[0].kind == '*' || toks[0].kind == '/' {
-		op := toks[0]
-		var y Val
-		toks, y = p.mulExpr(toks[1:])
-		var err error
-		if op.kind == '*' {
-			x, err = x.Mul(y)
-		} else {
-			x, err = x.Div(y)
-		}
-		if err != nil {
-			p.mathError(op, err)
-		}
-	}
-
-	return toks, x
-}
-
 func (p *parser) addExpr(toks []tok) ([]tok, Val) {
-	toks, x := p.numExp(toks)
+	toks, x := p.mulExpr(toks)
 
 	for toks[0].kind == '+' || toks[0].kind == '-' {
 		op := toks[0]
@@ -179,14 +156,31 @@ func (p *parser) addExpr(toks []tok) ([]tok, Val) {
 	return toks, x
 }
 
-func (p *parser) numExp(toks []tok) ([]tok, Val) {
-	switch toks[0].kind {
-	case 0:
-		p.error(toks[0], "unexpected end")
-		return toks, Val{}
+func (p *parser) mulExpr(toks []tok) ([]tok, Val) {
+	toks, x := p.numExpr(toks)
 
+	for toks[0].kind == '*' || toks[0].kind == '/' {
+		op := toks[0]
+		var y Val
+		toks, y = p.numExpr(toks[1:])
+		var err error
+		if op.kind == '*' {
+			x, err = x.Mul(y)
+		} else {
+			x, err = x.Div(y)
+		}
+		if err != nil {
+			p.mathError(op, err)
+		}
+	}
+
+	return toks, x
+}
+
+func (p *parser) numExpr(toks []tok) ([]tok, Val) {
+	switch toks[0].kind {
 	case '(':
-		toks, x := p.mulExpr(toks[1:])
+		toks, x := p.addExpr(toks[1:])
 		if toks[0].kind == ')' {
 			return toks[1:], x
 		}
@@ -197,7 +191,7 @@ func (p *parser) numExp(toks []tok) ([]tok, Val) {
 		return p.number(toks)
 
 	case '-':
-		toks, x := p.mulExpr(toks[1:])
+		toks, x := p.numExpr(toks[1:])
 		x.val.Neg(&x.val)
 		return toks, x
 	}

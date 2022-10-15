@@ -29,6 +29,9 @@ func (x Val) Mul(y Val) (Val, error) {
 }
 
 func (x Val) Div(y Val) (Val, error) {
+	if y.val.Sign() == 0 {
+		return Val{}, fmt.Errorf("division by zero")
+	}
 	var z Val
 	z.val.Quo(&x.val, &y.val)
 	z.unit = x.unit.Div(y.unit)
@@ -36,5 +39,9 @@ func (x Val) Div(y Val) (Val, error) {
 }
 
 func (x Val) String() string {
+	return x.unit.Format(&x.val, false)
+}
+
+func (x Val) VerboseString() string {
 	return x.unit.Format(&x.val, true)
 }
